@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "alexis",
+      "passwordHash": "c9f7a627f923fedaec4a0ed33689785b:214bc8cc1cd9af3cd0f59ffff637557e3a7b89fa90b3632a76821a9df37957a951da74f3a9604f9d0489c90ae1c4a0bd9bd9f69e5dc8f96a6a4e05f654ce855b",
+      "createdAt": "2026-11-17T22:59:19.490Z"
+    }
+  ],
+  "profiles": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "skin_type": "Grasa",
+      "hydration": "Alta",
+      "climate": "Cálido y húmedo",
+      "humidity": "68%",
+      "created_at": "2026-11-17T23:00:07.730Z",
+      "updated_at": "2026-11-17T23:00:07.730Z"
+    }
+  ]
+}
