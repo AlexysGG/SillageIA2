@@ -45,12 +45,14 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
     : '';
   const activeAlert =
     mode === 'twins'
-      ? `${skinNote}${perfume.alertaTwins || perfume.alertaGlobal || 'Comportamiento equilibrado en tu tipo de piel.'}`
+      ? prediction?.alertaTwins
+        ? `${skinNote}${prediction.alertaTwins}`
+        : `${skinNote}${perfume.alertaTwins || perfume.alertaGlobal || 'Comportamiento equilibrado en tu tipo de piel.'}`
       : perfume.alertaGlobal || perfume.alertaTwins;
 
   const activeDuration =
     mode === 'twins' && prediction
-      ? `${prediction.duration} (${prediction.match}% match biológico) · ${perfume.durationTwins}`
+      ? `${prediction.duration} (${prediction.match}% match biológico para tu perfil)`
       : mode === 'twins'
       ? perfume.durationTwins
       : perfume.durationGlobal;
@@ -59,7 +61,7 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
     mode === 'twins' && prediction
       ? prediction.rating
       : mode === 'twins'
-      ? Math.min(5, perfume.rating + 0.1).toFixed(1)
+      ? Math.min(4.9, perfume.rating + 0.1).toFixed(1)
       : perfume.rating.toFixed(1);
 
   const handleShare = async () => {

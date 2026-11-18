@@ -5,7 +5,7 @@ import { ShareResult } from './shareService';
 export function setAppBadge(count: number): void {
   if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
     try {
-      (navigator as any).setAppBadge(count).catch(() => {});
+      (navigator as any).setAppBadge(count).catch(() => { });
     } catch {
       // Ignore unsupported environments
     }
@@ -15,7 +15,7 @@ export function setAppBadge(count: number): void {
 export function clearAppBadge(): void {
   if (typeof navigator !== 'undefined' && 'clearAppBadge' in navigator) {
     try {
-      (navigator as any).clearAppBadge().catch(() => {});
+      (navigator as any).clearAppBadge().catch(() => { });
     } catch {
       // Ignore unsupported environments
     }
@@ -51,35 +51,96 @@ export function getLocalHumidity(): Promise<string> {
 export function computePrediction(perfume: CatalogPerfume, profile: SkinProfile): SkinPrediction {
   const skin = (profile.skinType || '').toLowerCase();
   const hydration = (profile.hydration || '').toLowerCase();
+  const climate = (profile.climate || '').toLowerCase();
+  const notesText = `${perfume.notes.top} ${perfume.notes.heart} ${perfume.notes.base}`.toLowerCase();
+  const isEdt = (perfume.concentration || '').toLowerCase().includes('toilette');
+  const isHeavy =
+    notesText.includes('oud') ||
+    notesText.includes('vainilla') ||
+    notesText.includes('praliné') ||
+    notesText.includes('cacao') ||
+    notesText.includes('ámbar');
+  const isCitrusFresh =
+    notesText.includes('bergamota') ||
+    notesText.includes('limón') ||
+    notesText.includes('toronja') ||
+    notesText.includes('mar') ||
+    notesText.includes('menta');
 
-  let score = perfume.rating || 3;
-  let duration = '6-8 horas';
+  let score = perfume.rating || 4.0;
+  let match = Math.round((score / 5) * 86); // base 72–82
+  let duration = isEdt ? '5-7 horas' : '7-9 horas';
 
   if (skin.includes('grasa')) {
-    score += 0.5;
-    duration = '8-10 horas';
+    score += isEdt ? 0.2 : 0.15;
+    duration = isEdt ? '7-8 horas' : '9-11 horas';
+    match += isHeavy && climate.includes('cálido') ? 3 : 8;
   } else if (skin.includes('seca')) {
-    score -= 0.5;
-    duration = '4-6 horas';
+    score -= isEdt ? 0.45 : 0.25;
+    duration = isEdt ? '3.5-5 horas' : '5-7 horas';
+    match += isHeavy ? 2 : -6;
+  } else if (skin.includes('mixta')) {
+    score += 0.1;
+    duration = isEdt ? '5.5-7 horas' : '7.5-9.5 horas';
+    match += 6;
+  } else if (skin.includes('sensible')) {
+    score -= isCitrusFresh ? 0.15 : 0.05;
+    duration = isEdt ? '5-6.5 horas' : '7-8.5 horas';
+    match += isHeavy ? -2 : 4;
+  } else {
+    // Normal
+    score += 0.1;
+    match += 6;
   }
 
-  if (hydration.includes('alta') || hydration.includes('bien')) {
-    score += 0.3;
-  } else if (hydration.includes('baja') || hydration.includes('seca')) {
-    score -= 0.3;
+  if (hydration.includes('alta')) {
+    score += 0.15;
+    match += 4;
+  } else if (hydration.includes('baja')) {
+    score -= 0.25;
+    match -= 6;
+  } else {
+    match += 1;
   }
 
-  const clamped = Math.min(5, Math.max(0, score));
+  if (climate.includes('húmedo') && isHeavy) {
+    match -= 3;
+  } else if (climate.includes('frío') && isHeavy) {
+    match += 4;
+  }
+
+  const clampedScore = Math.min(4.9, Math.max(3.2, score));
+  const clampedMatch = Math.min(98, Math.max(64, match));
+
+  // Alerta personalizada coherente con el perfil del usuario (sin contradicciones)
+  let alertaPersonalizada: string | null = null;
+  if (skin.includes('grasa')) {
+    if (isHeavy && climate.includes('cálido')) {
+      alertaPersonalizada = `En piel grasa y clima ${profile.climate}, las notas densas proyectan fuerte: usa 2–3 atomizaciones.`;
+    } else if (isCitrusFresh) {
+      alertaPersonalizada = `En piel grasa, la salida cítrica se suaviza rápido y da paso al fondo amaderado.`;
+    } else {
+      alertaPersonalizada = `Tu piel grasa fija muy bien el corazón y fondo de ${perfume.name} (${duration}).`;
+    }
+  } else if (skin.includes('seca')) {
+    alertaPersonalizada = `En piel seca la evaporación es más rápida: aplica crema neutra antes para ganar +2 horas.`;
+  } else if (hydration.includes('baja')) {
+    alertaPersonalizada = `Con hidratación baja, las notas de salida duran menos; hidrata la zona antes de atomizar.`;
+  } else if (skin.includes('sensible')) {
+    alertaPersonalizada = `En piel sensible, prueba primero en muñeca o aplica sobre la ropa para evitar irritación.`;
+  } else {
+    alertaPersonalizada = `Comportamiento equilibrado para piel ${profile.skinType} con hidratación ${profile.hydration}.`;
+  }
 
   return {
     id: perfume.id,
     name: perfume.name,
     brand: perfume.brand,
     category: perfume.category,
-    rating: clamped.toFixed(1),
+    rating: clampedScore.toFixed(1),
     duration,
-    alertaTwins: perfume.alertaTwins || null,
-    match: Math.round(Math.min(100, Math.max(0, (clamped / 5) * 100))),
+    alertaTwins: alertaPersonalizada,
+    match: clampedMatch,
   };
 }
 
