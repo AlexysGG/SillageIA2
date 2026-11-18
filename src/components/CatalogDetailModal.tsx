@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CatalogPerfume, SkinProfile } from '../types/perfume';
+import { AuthUser, CatalogPerfume, SkinProfile } from '../types/perfume';
 import {
   computePrediction,
   generatePerfumeReviews,
@@ -23,15 +23,19 @@ import {
 interface CatalogDetailModalProps {
   perfume: CatalogPerfume | null;
   skinProfile: SkinProfile | null;
+  authUser: AuthUser | null;
   onClose: () => void;
   onFindDupes: (perfume: CatalogPerfume) => void;
+  onPerfumeUpdated?: (updated: CatalogPerfume) => void;
 }
 
 export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
   perfume,
   skinProfile,
+  authUser,
   onClose,
   onFindDupes,
+  onPerfumeUpdated,
 }) => {
   const [mode, setMode] = useState<'global' | 'twins'>(skinProfile ? 'twins' : 'global');
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
@@ -46,17 +50,57 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
   const [newReviewOccasion, setNewReviewOccasion] = useState('Uso diario');
 
   useEffect(() => {
-    if (perfume) {
-      setMode(skinProfile ? 'twins' : 'global');
-      setNewReviewTarget(skinProfile ? 'twins' : 'global');
+    if (!perfume) return;
+    setMode(skinProfile ? 'twins' : 'global');
+    setNewReviewTarget(skinProfile ? 'twins' : 'global');
+
+    const loadReviews = async () => {
+      if (navigator.onLine) {
+        try {
+          const res = await fetch(`/api/perfumes/${perfume.id}/reviews`);
+          if (res.ok) {
+            const serverList = await res.json();
+            const mapped: PerfumeReview[] = serverList.map((r: any) => ({
+              id: r.id,
+              author: r.author || 'Usuario',
+              skinType: r.skinType || 'General',
+              hydration: r.hydration || 'Media',
+              climate: r.climate || 'Templado',
+              rating: Number(r.rating) || 5,
+              duration: r.duration || '6-8 horas',
+              sillage: r.sillage,
+              occasion: r.occasion,
+              target: r.target || 'both',
+              comment: r.comment,
+              date: r.createdAt
+                ? new Date(r.createdAt).toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'short',
+                  })
+                : 'Reciente',
+              twinMatch:
+                skinProfile && r.skinType === skinProfile.skinType ? 98 : undefined,
+            }));
+            setUserReviews(mapped);
+            try {
+              localStorage.setItem(`aura_perfume_reviews_${perfume.id}`, JSON.stringify(mapped));
+            } catch {}
+            return;
+          }
+        } catch {
+          // Fallback to localStorage
+        }
+      }
       try {
         const saved = localStorage.getItem(`aura_perfume_reviews_${perfume.id}`);
         setUserReviews(saved ? JSON.parse(saved) : []);
       } catch {
         setUserReviews([]);
       }
-    }
-  }, [perfume, skinProfile]);
+    };
+
+    loadReviews();
+  }, [perfume?.id, skinProfile]);
 
   const generatedReviews = useMemo(() => {
     if (!perfume) return [];
@@ -77,12 +121,12 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
     return [...filteredCustom, ...generatedReviews];
   }, [userReviews, generatedReviews, mode, skinProfile]);
 
-  const handleAddReview = (e: React.FormEvent) => {
+  const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!perfume || !newReviewText.trim()) return;
-    const review: PerfumeReview = {
-      id: `user-${Date.now()}`,
-      author: 'Tú',
+
+    const payload = {
+      author: authUser?.username || 'Invitado',
       skinType: skinProfile?.skinType || 'General',
       hydration: skinProfile?.hydration || 'Media',
       climate: skinProfile?.climate || 'Templado',
@@ -92,10 +136,41 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
       occasion: newReviewOccasion,
       target: newReviewTarget,
       comment: newReviewText.trim(),
+    };
+
+    let savedReview: PerfumeReview = {
+      id: `user-${Date.now()}`,
+      ...payload,
       date: 'Ahora mismo',
       twinMatch: skinProfile && newReviewTarget !== 'global' ? 100 : undefined,
     };
-    const updated = [review, ...userReviews];
+
+    if (navigator.onLine) {
+      try {
+        const res = await fetch(`/api/perfumes/${perfume.id}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.review) {
+            savedReview = {
+              ...savedReview,
+              id: data.review.id,
+              author: data.review.author,
+            };
+          }
+          if (data.perfume && onPerfumeUpdated) {
+            onPerfumeUpdated(data.perfume);
+          }
+        }
+      } catch {
+        // Fallback to local save
+      }
+    }
+
+    const updated = [savedReview, ...userReviews];
     setUserReviews(updated);
     try {
       localStorage.setItem(`aura_perfume_reviews_${perfume.id}`, JSON.stringify(updated));

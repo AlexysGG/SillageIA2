@@ -449,8 +449,15 @@ export default function App() {
       <CatalogDetailModal
         perfume={selectedCatalogPerfume}
         skinProfile={skinProfile}
+        authUser={authUser}
         onClose={() => setSelectedCatalogPerfume(null)}
         onFindDupes={handleFindDupesFromCatalog}
+        onPerfumeUpdated={(updatedPerfume) => {
+          setSelectedCatalogPerfume(updatedPerfume);
+          setCatalog((prev) =>
+            prev.map((item) => (item.id === updatedPerfume.id ? updatedPerfume : item))
+          );
+        }}
       />
 
       {/* Fragrance Details Modal with Web Share API */}

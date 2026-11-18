@@ -40,9 +40,27 @@ interface StoredSkinProfile {
   updated_at: string;
 }
 
+interface StoredReview {
+  id: string;
+  perfumeId: number;
+  userId?: number | null;
+  author: string;
+  skinType: string;
+  hydration: string;
+  climate: string;
+  rating: number;
+  duration: string;
+  sillage?: string;
+  occasion?: string;
+  target: 'global' | 'twins' | 'both';
+  comment: string;
+  createdAt: string;
+}
+
 interface StoreData {
   users: StoredUser[];
   profiles: StoredSkinProfile[];
+  reviews: StoredReview[];
 }
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -51,16 +69,17 @@ const STORE_FILE = path.join(DATA_DIR, 'store.json');
 function readStore(): StoreData {
   try {
     if (!fs.existsSync(STORE_FILE)) {
-      return { users: [], profiles: [] };
+      return { users: [], profiles: [], reviews: [] };
     }
     const raw = fs.readFileSync(STORE_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
     return {
       users: Array.isArray(parsed.users) ? parsed.users : [],
       profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+      reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
     };
   } catch {
-    return { users: [], profiles: [] };
+    return { users: [], profiles: [], reviews: [] };
   }
 }
 
@@ -405,8 +424,8 @@ Genera un JSON estructurado con el perfume original de referencia identificado, 
   } catch (error) {
     console.error('Error invoking Gemini API:', error);
     // Graceful fallback with curated perfumes matching user request
-    const { query = '', maxPrice = 50, minPrice = 0 } = req.body || {};
-    const fallback = getCuratedResponse(query, minPrice, maxPrice);
+    const { query = '', maxPrice = 50, minPrice = 0, skinProfile } = req.body || {};
+    const fallback = getCuratedResponse(query, minPrice, maxPrice, skinProfile);
     return res.json(fallback);
   }
 });
@@ -420,17 +439,95 @@ app.post('/api/push/send-test', (req, res) => {
 });
 
 // ============================================================
-// SillageAI: Catálogo de Perfumes, Auth y Gemelos de Piel
+// SillageAI: Catálogo de Perfumes, Reseñas, Auth y Gemelos de Piel
 // ============================================================
+function enrichPerfumeWithReviews(perfume: (typeof CATALOG_PERFUMES)[number], allReviews: StoredReview[]) {
+  const userRevs = allReviews.filter((r) => r.perfumeId === perfume.id);
+  if (userRevs.length === 0) return perfume;
+
+  // Ponderación: base histórica con peso 10 para que las reseñas reales de usuarios reflejen cambio visible en rating y % match
+  const baseWeight = 10;
+  const userSum = userRevs.reduce((acc, r) => acc + Number(r.rating || 0), 0);
+  const updatedRating = Number(((perfume.rating * baseWeight + userSum) / (baseWeight + userRevs.length)).toFixed(2));
+
+  return {
+    ...perfume,
+    rating: updatedRating,
+    reviews: perfume.reviews + userRevs.length,
+  };
+}
+
 app.get('/api/perfumes', (_req, res) => {
-  res.json(CATALOG_PERFUMES);
+  const store = readStore();
+  res.json(CATALOG_PERFUMES.map((p) => enrichPerfumeWithReviews(p, store.reviews)));
 });
 
 app.get('/api/perfumes/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
   const perfume = CATALOG_PERFUMES.find((p) => p.id === id);
   if (!perfume) return res.status(404).json({ error: 'Perfume not found' });
-  res.json(perfume);
+  const store = readStore();
+  res.json(enrichPerfumeWithReviews(perfume, store.reviews));
+});
+
+app.get('/api/perfumes/:id/reviews', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const store = readStore();
+  const list = store.reviews
+    .filter((r) => r.perfumeId === id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  res.json(list);
+});
+
+app.post('/api/perfumes/:id/reviews', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const perfume = CATALOG_PERFUMES.find((p) => p.id === id);
+  if (!perfume) return res.status(404).json({ error: 'Perfume not found' });
+
+  const sessionUser = getSessionUser(req);
+  const {
+    author,
+    skinType = 'General',
+    hydration = 'Media',
+    climate = 'Templado',
+    rating = 5,
+    duration = '6-8 horas',
+    sillage = 'Moderada',
+    occasion = 'Uso diario',
+    target = 'both',
+    comment,
+  } = req.body || {};
+
+  if (!comment || typeof comment !== 'string' || !comment.trim()) {
+    return res.status(400).json({ error: 'El comentario de la reseña es requerido' });
+  }
+
+  const store = readStore();
+  const newReview: StoredReview = {
+    id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    perfumeId: id,
+    userId: sessionUser?.id || null,
+    author: sessionUser?.username || String(author || 'Usuario').trim(),
+    skinType: String(skinType),
+    hydration: String(hydration),
+    climate: String(climate),
+    rating: Math.min(5, Math.max(1, Number(rating) || 5)),
+    duration: String(duration),
+    sillage: String(sillage),
+    occasion: String(occasion),
+    target: target === 'global' || target === 'twins' || target === 'both' ? target : 'both',
+    comment: comment.trim(),
+    createdAt: new Date().toISOString(),
+  };
+
+  store.reviews.unshift(newReview);
+  writeStore(store);
+
+  const updatedPerfume = enrichPerfumeWithReviews(perfume, store.reviews);
+  return res.status(201).json({
+    review: newReview,
+    perfume: updatedPerfume,
+  });
 });
 
 app.post('/api/auth/register', (req, res) => {
