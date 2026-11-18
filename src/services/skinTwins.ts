@@ -129,7 +129,12 @@ export function computePrediction(perfume: CatalogPerfume, profile: SkinProfile)
   } else if (skin.includes('sensible')) {
     alertaPersonalizada = `En piel sensible, prueba primero en muñeca o aplica sobre la ropa para evitar irritación.`;
   } else {
-    alertaPersonalizada = `Comportamiento equilibrado para piel ${profile.skinType} con hidratación ${profile.hydration}.`;
+    alertaPersonalizada =
+      isHeavy && climate.includes('cálido')
+        ? `En clima ${profile.climate}, las notas dulces o ambaradas proyectan más: modera las atomizaciones.`
+        : isCitrusFresh
+        ? `La salida cítrica se siente fresca en los primeros minutos antes de asentarse en el fondo.`
+        : `Comportamiento equilibrado en tu piel ${profile.skinType}: evolución y secado estables (${duration}).`;
   }
 
   return {

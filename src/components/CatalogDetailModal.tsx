@@ -40,14 +40,9 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
 
   const prediction = skinProfile ? computePrediction(perfume, skinProfile) : null;
   const twinReviews = Math.max(3, Math.round((perfume.reviews || 0) * 0.07));
-  const skinNote = skinProfile
-    ? `Para tu piel ${skinProfile.skinType} (hidratación ${skinProfile.hydration}, clima ${skinProfile.climate}): `
-    : '';
   const activeAlert =
     mode === 'twins'
-      ? prediction?.alertaTwins
-        ? `${skinNote}${prediction.alertaTwins}`
-        : `${skinNote}${perfume.alertaTwins || perfume.alertaGlobal || 'Comportamiento equilibrado en tu tipo de piel.'}`
+      ? prediction?.alertaTwins || perfume.alertaTwins || perfume.alertaGlobal || 'Comportamiento equilibrado en tu tipo de piel.'
       : perfume.alertaGlobal || perfume.alertaTwins;
 
   const activeDuration =
