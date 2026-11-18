@@ -551,6 +551,38 @@ app.get('/share-target', (req, res) => {
   res.redirect('/' + (q ? '?q=' + encodeURIComponent(q) : ''));
 });
 
+function adaptRecommendationsToSkin(items: PerfumeItem[], skinProfile?: any): PerfumeItem[] {
+  if (!skinProfile || !skinProfile.skinType) return items;
+  const skin = String(skinProfile.skinType).toLowerCase();
+  const hydration = String(skinProfile.hydration || 'Media');
+  const climate = String(skinProfile.climate || 'Templado');
+
+  return items.map((item) => {
+    let scoreDelta = 0;
+    let skinTip = `Adaptado a piel ${skinProfile.skinType} (hidratación ${hydration}, clima ${climate}).`;
+    let adjustedLongevity = item.longevityHours;
+
+    if (skin.includes('grasa')) {
+      scoreDelta = 2;
+      adjustedLongevity = `${item.longevityHours} (+1-2h en piel grasa)`;
+      skinTip = `En piel grasa retiene mejor las notas de fondo; aplica con moderación.`;
+    } else if (skin.includes('seca')) {
+      scoreDelta = -2;
+      adjustedLongevity = `${item.longevityHours} (usa crema neutra antes)`;
+      skinTip = `En piel seca puede evaporarse antes; hidrata la zona antes de aplicar.`;
+    } else if (skin.includes('sensible')) {
+      skinTip = `En piel sensible conviene probar primero en muñeca o aplicar sobre ropa.`;
+    }
+
+    return {
+      ...item,
+      matchScore: Math.min(99, Math.max(70, item.matchScore + scoreDelta)),
+      longevityHours: adjustedLongevity,
+      whyItMatches: `${item.whyItMatches} ${skinTip}`,
+    };
+  });
+}
+
 function getCuratedResponse(query: string, minPrice: number, maxPrice: number, skinProfile?: any) {
   const q = query.toLowerCase();
   const skinNote = skinProfile?.skinType
@@ -560,78 +592,81 @@ function getCuratedResponse(query: string, minPrice: number, maxPrice: number, s
   if (q.includes('club de nuit') || q.includes('aventus') || q.includes('creed') || q.includes('ahumado') || q.includes('piña') || q.includes('barato')) {
     const data = FALLBACK_CATALOG['club_de_nuit'];
     const filteredItems = data.items.filter(item => item.estimatedPrice <= maxPrice);
+    const chosen = filteredItems.length > 0 ? filteredItems : data.items.slice(0, 3);
     return {
       originalReference: data.original,
       originalEstimatedPrice: data.originalPrice,
       analysis: `Hemos encontrado excelentes alternativas directas con el célebre ADN cítrico y abedul ahumado de Club de Nuit Intense Man, priorizando opciones con precio por debajo de tu límite de ${maxPrice}€ y salidas más balanceadas.${skinNote}`,
-      recommendations: filteredItems.length > 0 ? filteredItems : data.items.slice(0, 3)
+      recommendations: adaptRecommendationsToSkin(chosen, skinProfile),
     };
   }
 
   // Generic fallback if different perfume requested
+  const genericItems: PerfumeItem[] = [
+    {
+      id: 'lattafa-khamrah',
+      name: 'Khamrah',
+      brand: 'Lattafa',
+      estimatedPrice: 34.00,
+      savingsPercent: 55,
+      matchScore: 94,
+      olfactoryFamily: 'Ámbar Especiado Gourmand',
+      topNotes: ['Canela', 'Nuez moscada', 'Bergamota'],
+      heartNotes: ['Dátiles', 'Praliné', 'Nardos', 'Mahonial'],
+      baseNotes: ['Vainilla', 'Haba tonka', 'Benjuí', 'Mirra', 'Madera de Akigala'],
+      longevityHours: '9 - 12 hrs',
+      sillage: 'Potente',
+      bestOccasions: ['Noches frías', 'Citas especiales', 'Invierno / Otoño'],
+      whyItMatches: 'Aroma dulce, licoroso y envolvente de nivel nicho con una relación calidad-precio excepcional.',
+      pros: ['Fijación extrema de más de 10 horas', 'Botella de cristal tallado estilo licorera', 'Calidez sofisticada'],
+      badge: 'Gourmand N° 1',
+      vibeDescription: 'Cálido, tentador y opulento con notas de canela, dátiles y vainilla tostada.'
+    },
+    {
+      id: 'zara-vibrant-leather',
+      name: 'Vibrant Leather',
+      brand: 'Zara',
+      estimatedPrice: 22.95,
+      savingsPercent: 65,
+      matchScore: 90,
+      olfactoryFamily: 'Amaderado Cítrico Cuero',
+      topNotes: ['Bergamota brillante'],
+      heartNotes: ['Bambú crujiente'],
+      baseNotes: ['Cuero flexible'],
+      longevityHours: '5 - 6 hrs',
+      sillage: 'Moderada',
+      bestOccasions: ['Oficina diaria', 'Clima templado', 'Uso versátil'],
+      whyItMatches: 'Alternativa limpia y minimalista, perfecta para presupuestos bajos sin renunciar a una salida fresca y moderna.',
+      pros: ['Muy económico', 'Aceptación universal', 'Elegante y no invasivo'],
+      badge: 'Mejor Opción Diaria',
+      vibeDescription: 'Frescura cítrica moderna con un fondo de cuero refinado y limpio.'
+    },
+    {
+      id: 'afnan-9pm',
+      name: '9 PM',
+      brand: 'Afnan',
+      estimatedPrice: 28.50,
+      savingsPercent: 60,
+      matchScore: 95,
+      olfactoryFamily: 'Ámbar Vainilla Dulce',
+      topNotes: ['Manzana', 'Canela', 'Lavanda silvestre', 'Bergamota'],
+      heartNotes: ['Flor de azahar', 'Lirio de los valles'],
+      baseNotes: ['Vainilla', 'Haba tonka', 'Ámbar', 'Pachulí'],
+      longevityHours: '8 - 10 hrs',
+      sillage: 'Intensa',
+      bestOccasions: ['Fiestas', 'Salidas nocturnas', 'Jóvenes y citas'],
+      whyItMatches: 'Famoso dupe del icónico Ultra Male de JPG, con salida afrutada y vainilla vibrante que dura toda la noche.',
+      pros: ['Generador de cumplidos número uno', 'Gran proyección nocturna', 'Excelente relación calidad-precio'],
+      badge: 'Rey de la Fiesta',
+      vibeDescription: 'Juvenil, seductor y dulce con una estela inconfundible.'
+    }
+  ];
+
   return {
     originalReference: query.length > 3 ? query : 'Fragancia de referencia',
     originalEstimatedPrice: 75,
     analysis: `Selección curada por IA con alternativas equilibradas de alta fijación dentro de tu rango de presupuesto (${minPrice}€ - ${maxPrice}€).${skinNote}`,
-    recommendations: [
-      {
-        id: 'lattafa-khamrah',
-        name: 'Khamrah',
-        brand: 'Lattafa',
-        estimatedPrice: 34.00,
-        savingsPercent: 55,
-        matchScore: 94,
-        olfactoryFamily: 'Ámbar Especiado Gourmand',
-        topNotes: ['Canela', 'Nuez moscada', 'Bergamota'],
-        heartNotes: ['Dátiles', 'Praliné', 'Nardos', 'Mahonial'],
-        baseNotes: ['Vainilla', 'Haba tonka', 'Benjuí', 'Mirra', 'Madera de Akigala'],
-        longevityHours: '9 - 12 hrs',
-        sillage: 'Potente',
-        bestOccasions: ['Noches frías', 'Citas especiales', 'Invierno / Otoño'],
-        whyItMatches: 'Aroma dulce, licoroso y envolvente de nivel nicho con una relación calidad-precio excepcional.',
-        pros: ['Fijación extrema de más de 10 horas', 'Botella de cristal tallado estilo licorera', 'Calidez sofisticada'],
-        badge: 'Gourmand N° 1',
-        vibeDescription: 'Cálido, tentador y opulento con notas de canela, dátiles y vainilla tostada.'
-      },
-      {
-        id: 'zara-vibrant-leather',
-        name: 'Vibrant Leather',
-        brand: 'Zara',
-        estimatedPrice: 22.95,
-        savingsPercent: 65,
-        matchScore: 90,
-        olfactoryFamily: 'Amaderado Cítrico Cuero',
-        topNotes: ['Bergamota brillante'],
-        heartNotes: ['Bambú crujiente'],
-        baseNotes: ['Cuero flexible'],
-        longevityHours: '5 - 6 hrs',
-        sillage: 'Moderada',
-        bestOccasions: ['Oficina diaria', 'Clima templado', 'Uso versátil'],
-        whyItMatches: 'Alternativa limpia y minimalista, perfecta para presupuestos bajos sin renunciar a una salida fresca y moderna.',
-        pros: ['Muy económico', 'Aceptación universal', 'Elegante y no invasivo'],
-        badge: 'Mejor Opción Diaria',
-        vibeDescription: 'Frescura cítrica moderna con un fondo de cuero refinado y limpio.'
-      },
-      {
-        id: 'afnan-9pm',
-        name: '9 PM',
-        brand: 'Afnan',
-        estimatedPrice: 28.50,
-        savingsPercent: 60,
-        matchScore: 95,
-        olfactoryFamily: 'Ámbar Vainilla Dulce',
-        topNotes: ['Manzana', 'Canela', 'Lavanda silvestre', 'Bergamota'],
-        heartNotes: ['Flor de azahar', 'Lirio de los valles'],
-        baseNotes: ['Vainilla', 'Haba tonka', 'Ámbar', 'Pachulí'],
-        longevityHours: '8 - 10 hrs',
-        sillage: 'Intensa',
-        bestOccasions: ['Fiestas', 'Salidas nocturnas', 'Jóvenes y citas'],
-        whyItMatches: 'Famoso dupe del icónico Ultra Male de JPG, con salida afrutada y vainilla vibrante que dura toda la noche.',
-        pros: ['Generador de cumplidos número uno', 'Gran proyección nocturna', 'Excelente relación calidad-precio'],
-        badge: 'Rey de la Fiesta',
-        vibeDescription: 'Juvenil, seductor y dulce con una estela inconfundible.'
-      }
-    ]
+    recommendations: adaptRecommendationsToSkin(genericItems, skinProfile),
   };
 }
 

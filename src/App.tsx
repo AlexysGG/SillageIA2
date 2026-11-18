@@ -191,15 +191,20 @@ export default function App() {
     }
   };
 
+  const getSkinKey = (profile: SkinProfile | null) =>
+    profile ? `${profile.skinType}_${profile.hydration}_${profile.climate}` : 'guest';
+
   const handleConsultar = useCallback(
-    async (searchQuery = query, budget = maxPrice) => {
+    async (searchQuery = query, budget = maxPrice, profileOverride?: SkinProfile | null) => {
       if (!searchQuery.trim()) return;
+      const activeProfile = profileOverride !== undefined ? profileOverride : skinProfile;
+      const skinKey = getSkinKey(activeProfile);
       setIsLoading(true);
       setError(null);
       setOfflineNotice(null);
 
-      // Check IndexedDB cache first
-      const cached = await getCachedQueryResult(searchQuery, budget);
+      // Check IndexedDB cache first (keyed by query + budget + skin profile)
+      const cached = await getCachedQueryResult(searchQuery, budget, skinKey);
 
       if (!navigator.onLine) {
         // In offline mode: use cached if available
@@ -223,7 +228,7 @@ export default function App() {
             query: searchQuery,
             maxPrice: budget,
             minPrice: 0,
-            skinProfile: skinProfile || undefined,
+            skinProfile: activeProfile || undefined,
           }),
         });
 
@@ -235,7 +240,7 @@ export default function App() {
         setResults(data);
 
         // Store in IndexedDB for instant offline retrieval
-        await cacheQueryResult(searchQuery, budget, data);
+        await cacheQueryResult(searchQuery, budget, data, skinKey);
 
         // Scroll to results gently
         setTimeout(() => {
@@ -262,7 +267,7 @@ export default function App() {
         setIsLoading(false);
       }
     },
-    [query, maxPrice, refreshPendingCount]
+    [query, maxPrice, skinProfile, refreshPendingCount]
   );
 
   // App Shortcuts & Web Share Target Handling (from URL ?action=... or ?q=.../?text=...)
@@ -411,6 +416,7 @@ export default function App() {
         {activeTab === 'catalog' && (
           <CatalogSection
             perfumes={catalog}
+            skinProfile={skinProfile}
             onSelectPerfume={(p) => setSelectedCatalogPerfume(p)}
             onFindDupes={handleFindDupesFromCatalog}
           />
@@ -428,6 +434,9 @@ export default function App() {
                 localStorage.setItem('aura_skin_profile', JSON.stringify(p));
               } else {
                 localStorage.removeItem('aura_skin_profile');
+              }
+              if (results && navigator.onLine) {
+                handleConsultar(query, maxPrice, p);
               }
             }}
             onRefreshSyncCount={refreshPendingCount}

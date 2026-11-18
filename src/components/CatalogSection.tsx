@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { CatalogPerfume } from '../types/perfume';
-import { Search, Star, Sparkles, Droplets, ArrowUpRight, Filter } from 'lucide-react';
+import { CatalogPerfume, SkinProfile } from '../types/perfume';
+import { computePrediction } from '../services/skinTwins';
+import { Search, Star, Sparkles, Droplets, ArrowUpRight, Filter, Users } from 'lucide-react';
 
 interface CatalogSectionProps {
   perfumes: CatalogPerfume[];
+  skinProfile: SkinProfile | null;
   onSelectPerfume: (perfume: CatalogPerfume) => void;
   onFindDupes: (perfume: CatalogPerfume) => void;
 }
@@ -25,6 +27,7 @@ const CATEGORY_BADGE_STYLES: Record<string, string> = {
 
 export const CatalogSection: React.FC<CatalogSectionProps> = ({
   perfumes,
+  skinProfile,
   onSelectPerfume,
   onFindDupes,
 }) => {
@@ -132,7 +135,9 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((p) => (
+          {filtered.map((p) => {
+            const skinPred = skinProfile ? computePrediction(p, skinProfile) : null;
+            return (
             <article
               key={p.id}
               onClick={() => onSelectPerfume(p)}
@@ -159,6 +164,15 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
                   {p.concentration} · {p.volume} · {p.year}
                 </p>
 
+                {skinPred && skinProfile && (
+                  <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full">
+                    <Users className="w-3 h-3 text-emerald-600" />
+                    <span>
+                      Piel {skinProfile.skinType}: {skinPred.match}% match · {skinPred.duration}
+                    </span>
+                  </div>
+                )}
+
                 <p className="text-xs text-zinc-600 mt-3 line-clamp-2 leading-relaxed">
                   {p.description}
                 </p>
@@ -180,7 +194,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
                   <span className="text-lg font-bold text-zinc-950">${p.price.toFixed(0)}</span>
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-700 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                    {p.rating.toFixed(1)}
+                    {skinPred ? skinPred.rating : p.rating.toFixed(1)}
                     <span className="text-zinc-400 font-normal">({p.reviews})</span>
                   </span>
                 </div>
@@ -211,7 +225,8 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
                 </div>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

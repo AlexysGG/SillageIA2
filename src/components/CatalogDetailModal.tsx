@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CatalogPerfume, SkinProfile } from '../types/perfume';
-import { shareCatalogPerfume } from '../services/skinTwins';
+import { computePrediction, shareCatalogPerfume } from '../services/skinTwins';
 import {
   X,
   Star,
@@ -27,20 +27,40 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
   onClose,
   onFindDupes,
 }) => {
-  const [mode, setMode] = useState<'global' | 'twins'>('global');
+  const [mode, setMode] = useState<'global' | 'twins'>(skinProfile ? 'twins' : 'global');
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (perfume) {
+      setMode(skinProfile ? 'twins' : 'global');
+    }
+  }, [perfume, skinProfile]);
 
   if (!perfume) return null;
 
+  const prediction = skinProfile ? computePrediction(perfume, skinProfile) : null;
   const twinReviews = Math.max(3, Math.round((perfume.reviews || 0) * 0.07));
+  const skinNote = skinProfile
+    ? `Para tu piel ${skinProfile.skinType} (hidratación ${skinProfile.hydration}, clima ${skinProfile.climate}): `
+    : '';
   const activeAlert =
     mode === 'twins'
-      ? perfume.alertaTwins || perfume.alertaGlobal
+      ? `${skinNote}${perfume.alertaTwins || perfume.alertaGlobal || 'Comportamiento equilibrado en tu tipo de piel.'}`
       : perfume.alertaGlobal || perfume.alertaTwins;
 
-  const activeDuration = mode === 'twins' ? perfume.durationTwins : perfume.durationGlobal;
+  const activeDuration =
+    mode === 'twins' && prediction
+      ? `${prediction.duration} (${prediction.match}% match biológico) · ${perfume.durationTwins}`
+      : mode === 'twins'
+      ? perfume.durationTwins
+      : perfume.durationGlobal;
+
   const activeRating =
-    mode === 'twins' ? Math.min(5, perfume.rating + 0.1).toFixed(1) : perfume.rating.toFixed(1);
+    mode === 'twins' && prediction
+      ? prediction.rating
+      : mode === 'twins'
+      ? Math.min(5, perfume.rating + 0.1).toFixed(1)
+      : perfume.rating.toFixed(1);
 
   const handleShare = async () => {
     const res = await shareCatalogPerfume(perfume);

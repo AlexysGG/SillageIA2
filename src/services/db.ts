@@ -61,8 +61,8 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /** Helper to generate cache key */
-function makeKey(query: string, maxPrice: number): string {
-  return `${query.trim().toLowerCase()}_${maxPrice}`;
+function makeKey(query: string, maxPrice: number, skinKey = 'guest'): string {
+  return `${query.trim().toLowerCase()}_${maxPrice}_${skinKey.toLowerCase()}`;
 }
 
 // ----------------- QUERIES CACHE -----------------
@@ -70,13 +70,14 @@ function makeKey(query: string, maxPrice: number): string {
 export async function cacheQueryResult(
   query: string,
   maxPrice: number,
-  data: RecommendationResponse
+  data: RecommendationResponse,
+  skinKey = 'guest'
 ): Promise<void> {
   try {
     const db = await openDB();
     const tx = db.transaction('queries_cache', 'readwrite');
     const store = tx.objectStore('queries_cache');
-    const key = makeKey(query, maxPrice);
+    const key = makeKey(query, maxPrice, skinKey);
 
     store.put({
       id: key,
@@ -97,13 +98,14 @@ export async function cacheQueryResult(
 
 export async function getCachedQueryResult(
   query: string,
-  maxPrice: number
+  maxPrice: number,
+  skinKey = 'guest'
 ): Promise<RecommendationResponse | null> {
   try {
     const db = await openDB();
     const tx = db.transaction('queries_cache', 'readonly');
     const store = tx.objectStore('queries_cache');
-    const key = makeKey(query, maxPrice);
+    const key = makeKey(query, maxPrice, skinKey);
 
     return new Promise((resolve) => {
       const req = store.get(key);
