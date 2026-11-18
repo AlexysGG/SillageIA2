@@ -48,22 +48,30 @@ export async function sendLocalNotification(
   }
 
   try {
-    const registration = await navigator.serviceWorker.ready;
-    const defaultOptions: NotificationOptions = {
+    const defaultOptions: NotificationOptions & { renotify?: boolean } = {
       body: 'Nuevos dupes y ofertas exclusivas disponibles en Aura.',
       icon: '/icons/icon-192x192.png',
       badge: '/icons/icon-192x192.png',
+      tag: 'aura-ai-notification',
+      renotify: true,
       data: { url: '/?action=search' },
       ...options,
     };
 
-    if (registration.showNotification) {
+    const swReady = Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ]);
+
+    const registration = await swReady;
+
+    if (registration && registration.showNotification) {
       await registration.showNotification(title, defaultOptions);
       return true;
-    } else {
-      new Notification(title, defaultOptions);
-      return true;
     }
+
+    new Notification(title, defaultOptions);
+    return true;
   } catch (err) {
     console.error('[Push] Error triggering notification:', err);
     return false;
