@@ -263,6 +263,94 @@ export function generateSkinTwins(
   return twins;
 }
 
+/* ---------- Reseñas por perfume (Consenso Global vs Gemelos de Piel) ---------- */
+export interface PerfumeReview {
+  id: string;
+  author: string;
+  skinType: string;
+  hydration: string;
+  climate: string;
+  rating: number;
+  duration: string;
+  comment: string;
+  date: string;
+  twinMatch?: number;
+}
+
+export function generatePerfumeReviews(
+  perfume: CatalogPerfume,
+  mode: 'global' | 'twins',
+  profile: SkinProfile | null
+): PerfumeReview[] {
+  const seed = hashSeed(`${perfume.id}|${mode}|${profile?.skinType || 'all'}|${profile?.hydration || ''}`);
+  const rnd = mulberry32(seed);
+  const topNote = perfume.notes.top.split(',')[0]?.trim() || 'la salida';
+  const baseNote = perfume.notes.base.split(',')[0]?.trim() || 'el fondo';
+
+  if (mode === 'twins') {
+    const skin = profile?.skinType || 'Mixta';
+    const hyd = profile?.hydration || 'Media';
+    const clim = profile?.climate || 'Templado';
+    const pred = profile ? computePrediction(perfume, profile) : null;
+    const baseDuration = pred?.duration || perfume.durationTwins;
+
+    const templates = [
+      `Con piel ${skin.toLowerCase()} e hidratación ${hyd.toLowerCase()}, ${perfume.name} me dio ${baseDuration}. El acorde de ${topNote.toLowerCase()} abre limpio y ${baseNote.toLowerCase()} queda muy bien fijado.`,
+      `Tengo química casi idéntica a la tuya (${skin}, ${clim}). En mi piel proyecta bien las primeras 2 horas y se mantiene perceptible sin saturar.`,
+      `Probado en clima ${clim.toLowerCase()}: el secado con ${baseNote.toLowerCase()} es lo que más destaca en nuestra piel. Recomendado si buscas buena fijación.`,
+    ];
+
+    return templates.map((comment, idx) => {
+      const name = `${TWINS_NAMES[Math.floor(rnd() * TWINS_NAMES.length)]} ${TWINS_SURNAMES[Math.floor(rnd() * TWINS_SURNAMES.length)]}`;
+      const match = Math.min(99, Math.round(90 + rnd() * 9));
+      const rating = Math.min(5, Math.max(3.5, Number((perfume.rating + (rnd() - 0.4) * 0.6).toFixed(1))));
+      const daysAgo = 2 + Math.floor(rnd() * 25);
+      return {
+        id: `twin-${perfume.id}-${idx}`,
+        author: name,
+        skinType: skin,
+        hydration: idx === 2 ? similarHydration(hyd) : hyd,
+        climate: clim,
+        rating,
+        duration: baseDuration,
+        comment,
+        date: `Hace ${daysAgo} días`,
+        twinMatch: match,
+      };
+    });
+  }
+
+  // Consenso Global (perfiles variados)
+  const globalProfiles = [
+    { skin: 'Grasa', hyd: 'Alta', clim: 'Templado', dur: '8-10 horas' },
+    { skin: 'Seca', hyd: 'Baja', clim: 'Cálido y seco', dur: '4-6 horas' },
+    { skin: 'Mixta', hyd: 'Media', clim: 'Cálido y húmedo', dur: '6-8 horas' },
+  ];
+
+  const globalComments = [
+    `Clásico muy reconocible de ${perfume.brand}. La salida de ${topNote.toLowerCase()} llama mucho la atención y el secado de ${baseNote.toLowerCase()} dura toda la jornada.`,
+    `Me encanta el aroma, aunque en mi piel seca necesito hidratar antes porque si no baja intensidad hacia las 5 horas.`,
+    `Muy versátil para el día a día y salidas. Tiene un equilibrio excelente entre frescura inicial y profundidad en el fondo.`,
+  ];
+
+  return globalProfiles.map((gp, idx) => {
+    const name = `${TWINS_NAMES[Math.floor(rnd() * TWINS_NAMES.length)]} ${TWINS_SURNAMES[Math.floor(rnd() * TWINS_SURNAMES.length)]}`;
+    const rating = Math.min(5, Math.max(3.5, Number((perfume.rating + (rnd() - 0.5) * 0.8).toFixed(1))));
+    const daysAgo = 3 + Math.floor(rnd() * 40);
+    return {
+      id: `global-${perfume.id}-${idx}`,
+      author: name,
+      skinType: gp.skin,
+      hydration: gp.hyd,
+      climate: gp.clim,
+      rating,
+      duration: gp.dur,
+      comment: globalComments[idx],
+      date: `Hace ${daysAgo} días`,
+    };
+  });
+}
+
 /* ---------- Web Share API para fragancias del catálogo ---------- */
 export async function shareCatalogPerfume(perfume: CatalogPerfume): Promise<ShareResult> {
   const shareTitle = `${perfume.name} — ${perfume.brand}`;

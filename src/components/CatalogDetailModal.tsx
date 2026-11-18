@@ -1,6 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CatalogPerfume, SkinProfile } from '../types/perfume';
-import { computePrediction, shareCatalogPerfume } from '../services/skinTwins';
+import {
+  computePrediction,
+  generatePerfumeReviews,
+  PerfumeReview,
+  shareCatalogPerfume,
+} from '../services/skinTwins';
 import {
   X,
   Star,
@@ -12,6 +17,7 @@ import {
   Users,
   Globe,
   Clock,
+  MessageSquare,
 } from 'lucide-react';
 
 interface CatalogDetailModalProps {
@@ -29,12 +35,59 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
 }) => {
   const [mode, setMode] = useState<'global' | 'twins'>(skinProfile ? 'twins' : 'global');
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [userReviews, setUserReviews] = useState<PerfumeReview[]>([]);
+  const [newReviewText, setNewReviewText] = useState('');
+  const [newReviewRating, setNewReviewRating] = useState(5);
 
   useEffect(() => {
     if (perfume) {
       setMode(skinProfile ? 'twins' : 'global');
+      try {
+        const saved = localStorage.getItem(`aura_perfume_reviews_${perfume.id}`);
+        setUserReviews(saved ? JSON.parse(saved) : []);
+      } catch {
+        setUserReviews([]);
+      }
     }
   }, [perfume, skinProfile]);
+
+  const generatedReviews = useMemo(() => {
+    if (!perfume) return [];
+    return generatePerfumeReviews(perfume, mode, skinProfile);
+  }, [perfume, mode, skinProfile]);
+
+  const displayedReviews = useMemo(() => {
+    const filteredCustom =
+      mode === 'twins' && skinProfile
+        ? userReviews.filter((r) => r.skinType === skinProfile.skinType)
+        : userReviews;
+    return [...filteredCustom, ...generatedReviews];
+  }, [userReviews, generatedReviews, mode, skinProfile]);
+
+  const handleAddReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!perfume || !newReviewText.trim()) return;
+    const review: PerfumeReview = {
+      id: `user-${Date.now()}`,
+      author: 'Tú',
+      skinType: skinProfile?.skinType || 'General',
+      hydration: skinProfile?.hydration || 'Media',
+      climate: skinProfile?.climate || 'Templado',
+      rating: newReviewRating,
+      duration: prediction?.duration || perfume.durationGlobal,
+      comment: newReviewText.trim(),
+      date: 'Ahora mismo',
+      twinMatch: skinProfile ? 100 : undefined,
+    };
+    const updated = [review, ...userReviews];
+    setUserReviews(updated);
+    try {
+      localStorage.setItem(`aura_perfume_reviews_${perfume.id}`, JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+    setNewReviewText('');
+  };
 
   if (!perfume) return null;
 
@@ -244,6 +297,86 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
             </span>
             <span className="font-semibold text-zinc-800">{perfume.volume}</span>
           </div>
+        </div>
+
+        {/* Reseñas (Consenso Global vs. Gemelos de Piel) */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-zinc-500" />
+              <span>
+                {mode === 'twins'
+                  ? `Reseñas de Gemelos de Piel (${skinProfile ? `Piel ${skinProfile.skinType}` : 'Filtradas'})`
+                  : 'Reseñas del Consenso Global'}
+              </span>
+            </h4>
+            <span className="text-[11px] text-zinc-400 font-medium">
+              {mode === 'twins' ? `${twinReviews} filtradas` : `${perfume.reviews} totales`}
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {displayedReviews.map((rev) => (
+              <div
+                key={rev.id}
+                className="p-3.5 rounded-2xl bg-zinc-50/80 border border-zinc-200/70 space-y-1.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-zinc-900">{rev.author}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-zinc-200 text-zinc-600 font-medium">
+                      Piel {rev.skinType} · {rev.hydration}
+                    </span>
+                    {rev.twinMatch && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold">
+                        {rev.twinMatch}% gemelo
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                      {rev.rating.toFixed(1)}
+                    </span>
+                    <span className="text-[10px] text-zinc-400">{rev.date}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-700 leading-relaxed">{rev.comment}</p>
+                <div className="text-[10px] text-zinc-400">
+                  Fijación reportada: <strong className="text-zinc-600">{rev.duration}</strong> · Clima {rev.climate}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Agregar reseña propia */}
+          <form onSubmit={handleAddReview} className="flex flex-col sm:flex-row gap-2 pt-1">
+            <input
+              type="text"
+              value={newReviewText}
+              onChange={(e) => setNewReviewText(e.target.value)}
+              placeholder={`Escribe tu experiencia con ${perfume.name} en tu piel...`}
+              className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50/70 text-xs text-zinc-900 placeholder:text-zinc-400 focus:bg-white focus:border-zinc-900 focus:outline-hidden"
+            />
+            <select
+              value={newReviewRating}
+              onChange={(e) => setNewReviewRating(Number(e.target.value))}
+              className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-zinc-50/70 text-xs text-zinc-800 focus:outline-hidden"
+            >
+              <option value={5}>5 ★</option>
+              <option value={4}>4 ★</option>
+              <option value={3}>3 ★</option>
+              <option value={2}>2 ★</option>
+              <option value={1}>1 ★</option>
+            </select>
+            <button
+              type="submit"
+              disabled={!newReviewText.trim()}
+              className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors disabled:opacity-40"
+            >
+              Publicar
+            </button>
+          </form>
         </div>
 
         {/* Actions */}
