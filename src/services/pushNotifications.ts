@@ -58,6 +58,18 @@ export async function sendLocalNotification(
       ...options,
     };
 
+    // Emit in-app notification event so PC/desktop users always see visual feedback
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('aura:notification', {
+          detail: {
+            title,
+            body: defaultOptions.body || '',
+          },
+        })
+      );
+    }
+
     const swReady = Promise.race([
       navigator.serviceWorker.ready,
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),

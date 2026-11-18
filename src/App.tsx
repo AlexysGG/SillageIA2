@@ -41,7 +41,7 @@ import {
   requestNotificationPermission,
   sendLocalNotification,
 } from './services/pushNotifications';
-import { Info, RefreshCw, Feather, WifiOff } from 'lucide-react';
+import { Info, RefreshCw, Feather, WifiOff, Bell, X } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('search');
@@ -55,6 +55,24 @@ export default function App() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [inAppNotification, setInAppNotification] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ title: string; body: string }>).detail;
+      if (detail) {
+        setInAppNotification(detail);
+        setTimeout(() => {
+          setInAppNotification((prev) => (prev?.title === detail.title ? null : prev));
+        }, 6000);
+      }
+    };
+    window.addEventListener('aura:notification', handler);
+    return () => window.removeEventListener('aura:notification', handler);
+  }, []);
 
   // SillageAI: Catalog, Auth & Skin Profile
   const [catalog, setCatalog] = useState<CatalogPerfume[]>(CATALOG_PERFUMES);
@@ -529,6 +547,31 @@ export default function App() {
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
       />
+
+      {/* In-App Floating Notification Toast (always visible on PC) */}
+      {inAppNotification && (
+        <div className="fixed top-20 right-4 z-50 max-w-sm w-[calc(100%-2rem)] bg-zinc-950 text-white rounded-2xl border border-zinc-800 shadow-2xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="w-8 h-8 rounded-full bg-amber-400/15 border border-amber-400/30 flex items-center justify-center shrink-0">
+            <Bell className="w-4 h-4 text-amber-300" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold text-white">{inAppNotification.title}</div>
+            {inAppNotification.body && (
+              <p className="text-[11px] text-zinc-300 mt-0.5 leading-relaxed">
+                {inAppNotification.body}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setInAppNotification(null)}
+            className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+            aria-label="Cerrar notificación"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Clean Minimalist Footer */}
       <footer className="border-t border-zinc-200/80 bg-white py-8 mt-16 text-center text-xs text-zinc-400">
