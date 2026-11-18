@@ -38,10 +38,17 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
   const [userReviews, setUserReviews] = useState<PerfumeReview[]>([]);
   const [newReviewText, setNewReviewText] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewTarget, setNewReviewTarget] = useState<'global' | 'twins' | 'both'>(
+    skinProfile ? 'twins' : 'global'
+  );
+  const [newReviewDuration, setNewReviewDuration] = useState('7-9 horas');
+  const [newReviewSillage, setNewReviewSillage] = useState('Moderada');
+  const [newReviewOccasion, setNewReviewOccasion] = useState('Uso diario');
 
   useEffect(() => {
     if (perfume) {
       setMode(skinProfile ? 'twins' : 'global');
+      setNewReviewTarget(skinProfile ? 'twins' : 'global');
       try {
         const saved = localStorage.getItem(`aura_perfume_reviews_${perfume.id}`);
         setUserReviews(saved ? JSON.parse(saved) : []);
@@ -57,10 +64,16 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
   }, [perfume, mode, skinProfile]);
 
   const displayedReviews = useMemo(() => {
-    const filteredCustom =
-      mode === 'twins' && skinProfile
-        ? userReviews.filter((r) => r.skinType === skinProfile.skinType)
-        : userReviews;
+    const filteredCustom = userReviews.filter((r) => {
+      const t = r.target || 'both';
+      if (mode === 'global') {
+        return t === 'global' || t === 'both';
+      }
+      // mode === 'twins'
+      const matchesTarget = t === 'twins' || t === 'both';
+      const matchesSkin = !skinProfile || r.skinType === skinProfile.skinType;
+      return matchesTarget && matchesSkin;
+    });
     return [...filteredCustom, ...generatedReviews];
   }, [userReviews, generatedReviews, mode, skinProfile]);
 
@@ -74,10 +87,13 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
       hydration: skinProfile?.hydration || 'Media',
       climate: skinProfile?.climate || 'Templado',
       rating: newReviewRating,
-      duration: prediction?.duration || perfume.durationGlobal,
+      duration: newReviewDuration,
+      sillage: newReviewSillage,
+      occasion: newReviewOccasion,
+      target: newReviewTarget,
       comment: newReviewText.trim(),
       date: 'Ahora mismo',
-      twinMatch: skinProfile ? 100 : undefined,
+      twinMatch: skinProfile && newReviewTarget !== 'global' ? 100 : undefined,
     };
     const updated = [review, ...userReviews];
     setUserReviews(updated);
@@ -342,40 +358,142 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
                   </div>
                 </div>
                 <p className="text-xs text-zinc-700 leading-relaxed">{rev.comment}</p>
-                <div className="text-[10px] text-zinc-400">
-                  Fijación reportada: <strong className="text-zinc-600">{rev.duration}</strong> · Clima {rev.climate}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-zinc-400">
+                  <span>
+                    Fijación reportada: <strong className="text-zinc-600">{rev.duration}</strong>
+                  </span>
+                  {rev.sillage && (
+                    <span>
+                      · Estela: <strong className="text-zinc-600">{rev.sillage}</strong>
+                    </span>
+                  )}
+                  {rev.occasion && (
+                    <span>
+                      · Ocasión: <strong className="text-zinc-600">{rev.occasion}</strong>
+                    </span>
+                  )}
+                  <span>· Clima {rev.climate}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Agregar reseña propia */}
-          <form onSubmit={handleAddReview} className="flex flex-col sm:flex-row gap-2 pt-1">
-            <input
-              type="text"
-              value={newReviewText}
-              onChange={(e) => setNewReviewText(e.target.value)}
-              placeholder={`Escribe tu experiencia con ${perfume.name} en tu piel...`}
-              className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 bg-zinc-50/70 text-xs text-zinc-900 placeholder:text-zinc-400 focus:bg-white focus:border-zinc-900 focus:outline-hidden"
-            />
-            <select
-              value={newReviewRating}
-              onChange={(e) => setNewReviewRating(Number(e.target.value))}
-              className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-zinc-50/70 text-xs text-zinc-800 focus:outline-hidden"
-            >
-              <option value={5}>5 ★</option>
-              <option value={4}>4 ★</option>
-              <option value={3}>3 ★</option>
-              <option value={2}>2 ★</option>
-              <option value={1}>1 ★</option>
-            </select>
-            <button
-              type="submit"
-              disabled={!newReviewText.trim()}
-              className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors disabled:opacity-40"
-            >
-              Publicar
-            </button>
+          <form
+            onSubmit={handleAddReview}
+            className="bg-zinc-50/70 border border-zinc-200/80 rounded-2xl p-3.5 space-y-2.5"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                Publicar mi reseña
+              </span>
+              <div className="flex items-center gap-1 bg-zinc-200/70 p-0.5 rounded-lg text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setNewReviewTarget('global')}
+                  className={`px-2 py-1 rounded-md font-medium transition-all ${
+                    newReviewTarget === 'global'
+                      ? 'bg-white text-zinc-900 shadow-2xs'
+                      : 'text-zinc-600'
+                  }`}
+                >
+                  Consenso Global
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewReviewTarget('twins')}
+                  className={`px-2 py-1 rounded-md font-medium transition-all ${
+                    newReviewTarget === 'twins'
+                      ? 'bg-zinc-900 text-white shadow-2xs'
+                      : 'text-zinc-600'
+                  }`}
+                >
+                  Gemelos de Piel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewReviewTarget('both')}
+                  className={`px-2 py-1 rounded-md font-medium transition-all ${
+                    newReviewTarget === 'both'
+                      ? 'bg-emerald-700 text-white shadow-2xs'
+                      : 'text-zinc-600'
+                  }`}
+                >
+                  Ambos
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <select
+                value={newReviewRating}
+                onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                title="Calificación"
+                className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-800 focus:outline-hidden"
+              >
+                <option value={5}>5 ★ Excelente</option>
+                <option value={4}>4 ★ Muy bueno</option>
+                <option value={3}>3 ★ Normal</option>
+                <option value={2}>2 ★ Flojo</option>
+                <option value={1}>1 ★ Malo</option>
+              </select>
+
+              <select
+                value={newReviewDuration}
+                onChange={(e) => setNewReviewDuration(e.target.value)}
+                title="Horas de fijación"
+                className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-800 focus:outline-hidden"
+              >
+                <option value="Menos de 3 horas">&lt; 3 horas</option>
+                <option value="3-5 horas">3-5 horas</option>
+                <option value="5-7 horas">5-7 horas</option>
+                <option value="7-9 horas">7-9 horas</option>
+                <option value="9-12 horas">9-12 horas</option>
+                <option value="+12 horas">+12 horas</option>
+              </select>
+
+              <select
+                value={newReviewSillage}
+                onChange={(e) => setNewReviewSillage(e.target.value)}
+                title="Estela / Proyección"
+                className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-800 focus:outline-hidden"
+              >
+                <option value="Íntima">Estela: Íntima</option>
+                <option value="Moderada">Estela: Moderada</option>
+                <option value="Fuerte">Estela: Fuerte</option>
+                <option value="Modo Bestia">Estela: Modo Bestia</option>
+              </select>
+
+              <select
+                value={newReviewOccasion}
+                onChange={(e) => setNewReviewOccasion(e.target.value)}
+                title="Ocasión de uso"
+                className="px-2.5 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-800 focus:outline-hidden"
+              >
+                <option value="Uso diario">Uso diario</option>
+                <option value="Oficina">Oficina</option>
+                <option value="Noche / Fiesta">Noche / Fiesta</option>
+                <option value="Clima cálido">Clima cálido</option>
+                <option value="Clima frío">Clima frío</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={newReviewText}
+                onChange={(e) => setNewReviewText(e.target.value)}
+                placeholder={`Escribe tu experiencia con ${perfume.name} en tu piel...`}
+                className="flex-1 px-3 py-2 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-hidden"
+              />
+              <button
+                type="submit"
+                disabled={!newReviewText.trim()}
+                className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-colors disabled:opacity-40"
+              >
+                Publicar reseña
+              </button>
+            </div>
           </form>
         </div>
 

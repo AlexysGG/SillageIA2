@@ -272,6 +272,9 @@ export interface PerfumeReview {
   climate: string;
   rating: number;
   duration: string;
+  sillage?: string;
+  occasion?: string;
+  target?: 'global' | 'twins' | 'both';
   comment: string;
   date: string;
   twinMatch?: number;
