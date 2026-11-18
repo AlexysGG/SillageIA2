@@ -36,11 +36,16 @@ import {
   saveSkinProfileDB,
 } from './services/db';
 import { setAppBadge } from './services/skinTwins';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendLocalNotification,
+} from './services/pushNotifications';
 import { Info, RefreshCw, Feather, WifiOff } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('search');
-  const [query, setQuery] = useState('quiero un perfume similar de Club de nuit mas barato');
+  const [query, setQuery] = useState('');
   const [maxPrice, setMaxPrice] = useState(35);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -242,6 +247,18 @@ export default function App() {
         // Store in IndexedDB for instant offline retrieval
         await cacheQueryResult(searchQuery, budget, data, skinKey);
 
+        // Notify user when AI finishes the query
+        if (getNotificationPermission() === 'granted') {
+          const topPick = data.recommendations?.[0];
+          const body = topPick
+            ? `Encontramos ${data.recommendations.length} alternativas para "${data.originalReference}". Destacada: ${topPick.name} (${topPick.brand}) ~${topPick.estimatedPrice.toFixed(2)}€.`
+            : `Tu consulta sobre "${data.originalReference}" está lista.`;
+          sendLocalNotification('Aura AI · Recomendación lista', {
+            body,
+            data: { url: '/?action=search' },
+          });
+        }
+
         // Scroll to results gently
         setTimeout(() => {
           const el = document.getElementById('results-section');
@@ -302,9 +319,6 @@ export default function App() {
       setQuery(q);
       setMaxPrice(40);
       handleConsultar(q, 40);
-    } else {
-      // Default initial query
-      handleConsultar('quiero un perfume similar de Club de nuit mas barato', 35);
     }
   }, []);
 
@@ -326,9 +340,10 @@ export default function App() {
         favoritesCount={favorites.length}
         onOpenWishlist={() => setIsWishlistOpen(true)}
         onReset={() => {
-          setQuery('quiero un perfume similar de Club de nuit mas barato');
+          setQuery('');
           setMaxPrice(35);
-          handleConsultar('quiero un perfume similar de Club de nuit mas barato', 35);
+          setResults(null);
+          setError(null);
         }}
         onOpenInstall={() => setIsInstallModalOpen(true)}
         onOpenNotifications={() => setIsNotificationModalOpen(true)}
@@ -373,7 +388,12 @@ export default function App() {
               setQuery={setQuery}
               maxPrice={maxPrice}
               setMaxPrice={setMaxPrice}
-              onSearch={() => handleConsultar(query, maxPrice)}
+              onSearch={async () => {
+                if (getNotificationPermission() === 'default') {
+                  await requestNotificationPermission();
+                }
+                handleConsultar(query, maxPrice);
+              }}
               isLoading={isLoading}
             />
 
