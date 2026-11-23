@@ -380,7 +380,7 @@ export const CatalogDetailModal: React.FC<CatalogDetailModalProps> = ({
             <span className="text-[10px] uppercase tracking-wider text-zinc-400 block">
               Precio ref.
             </span>
-            <span className="font-semibold text-zinc-800">${perfume.price.toFixed(2)}</span>
+            <span className="font-semibold text-zinc-800">${perfume.price.toLocaleString('es-MX')} MXN</span>
           </div>
           <div>
             <span className="text-[10px] uppercase tracking-wider text-zinc-400 block">

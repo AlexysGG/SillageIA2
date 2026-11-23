@@ -23,6 +23,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   onSelectPerfume,
 }) => {
   const [sortBy, setSortBy] = useState<SortOption>('affinity');
+  const [bottlesPerYear, setBottlesPerYear] = useState<number>(2);
 
   // Filter recommendations based on current budget slider
   const filteredItems = useMemo(() => {
@@ -70,28 +71,54 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             </p>
           </div>
 
-          {/* Reference price comparison badge */}
-          {data.originalEstimatedPrice > 0 && (
-            <div className="shrink-0 bg-zinc-50 border border-zinc-200/70 rounded-xl px-4 py-3 flex items-center gap-4">
-              <div>
-                <span className="text-[11px] uppercase tracking-wider text-zinc-400 block font-medium">
-                  Precio Original Ref.
-                </span>
-                <span className="text-lg font-bold text-zinc-900 line-through decoration-zinc-400">
-                  ~{data.originalEstimatedPrice} €
-                </span>
+          {/* Calculadora de Ahorro en MXN */}
+          {data.originalEstimatedPrice > 0 && (() => {
+            const bestOption = sortedItems[0] || data.recommendations[0];
+            const dupePrice = bestOption ? bestOption.estimatedPrice : data.originalEstimatedPrice * 0.45;
+            const unitSavings = Math.max(0, Math.round(data.originalEstimatedPrice - dupePrice));
+            const annualSavings = unitSavings * bottlesPerYear;
+            return (
+              <div className="shrink-0 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl px-4 py-3 space-y-2 min-w-[260px]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-medium">
+                      Original Ref.
+                    </span>
+                    <span className="text-sm font-bold text-zinc-700 line-through decoration-zinc-400">
+                      ~${Math.round(data.originalEstimatedPrice).toLocaleString('es-MX')} MXN
+                    </span>
+                  </div>
+                  <div className="h-7 w-px bg-emerald-200/80" />
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-emerald-800 block font-semibold">
+                      Ahorro por frasco
+                    </span>
+                    <span className="text-base font-bold text-emerald-700">
+                      ${unitSavings.toLocaleString('es-MX')} MXN
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between gap-2 text-[11px]">
+                  <span className="text-emerald-900 font-medium">
+                    Frascos/año:
+                    <select
+                      value={bottlesPerYear}
+                      onChange={(e) => setBottlesPerYear(Number(e.target.value))}
+                      className="ml-1.5 bg-white border border-emerald-200 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-emerald-900"
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                      <option value={4}>4</option>
+                    </select>
+                  </span>
+                  <span className="font-bold text-emerald-800">
+                    Ahorro anual: ${annualSavings.toLocaleString('es-MX')} MXN
+                  </span>
+                </div>
               </div>
-              <div className="h-8 w-px bg-zinc-200" />
-              <div>
-                <span className="text-[11px] uppercase tracking-wider text-emerald-700 block font-medium">
-                  Ahorro en Dupes
-                </span>
-                <span className="text-lg font-bold text-emerald-600">
-                  Hasta un 65%
-                </span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Results Controls Bar */}
@@ -101,7 +128,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             <strong className="text-zinc-900 font-semibold">
               {sortedItems.length} {sortedItems.length === 1 ? 'fragancia' : 'fragancias'}
             </strong>
-            <span>dentro de tu presupuesto (≤ {currentMaxPrice} €)</span>
+            <span>dentro de tu presupuesto (≤ ${currentMaxPrice.toLocaleString('es-MX')} MXN)</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -166,23 +193,23 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             <AlertCircle className="w-6 h-6" />
           </div>
           <h3 className="text-lg font-bold text-zinc-900 font-serif-luxury">
-            Ninguna alternativa por debajo de {currentMaxPrice} €
+            Ninguna alternativa por debajo de ${currentMaxPrice.toLocaleString('es-MX')} MXN
           </h3>
           <p className="text-sm text-zinc-500 max-w-md mx-auto mt-1 mb-4 font-normal">
-            Las alternativas de alta fijación para esta consulta empiezan a partir de los 22 € - 25 €. Puedes ampliar el presupuesto para ver los resultados.
+            Las alternativas de alta fijación para esta consulta suelen empezar desde $450 - $550 MXN. Puedes ampliar el presupuesto para ver los resultados.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button
-              onClick={() => onAdjustMaxPrice(35)}
+              onClick={() => onAdjustMaxPrice(800)}
               className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold transition-all shadow-xs"
             >
-              Ajustar a 35 €
+              Ajustar a $800 MXN
             </button>
             <button
-              onClick={() => onAdjustMaxPrice(60)}
+              onClick={() => onAdjustMaxPrice(1400)}
               className="px-4 py-2 bg-white hover:bg-zinc-50 text-zinc-800 border border-zinc-200 rounded-xl text-xs font-semibold transition-all"
             >
-              Ajustar a 60 €
+              Ajustar a $1,400 MXN
             </button>
           </div>
         </div>

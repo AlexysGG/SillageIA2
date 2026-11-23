@@ -75,7 +75,7 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({
                       {item.name}
                     </h4>
                     <span className="text-xs font-semibold text-zinc-800">
-                      {item.estimatedPrice.toFixed(2)} €
+                      ${Math.round(item.estimatedPrice).toLocaleString('es-MX')} MXN
                     </span>
                     <span className="text-[11px] text-emerald-600 font-medium ml-2">
                       ({item.matchScore}% afinidad)
@@ -105,7 +105,7 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({
             <div className="flex items-center justify-between text-sm">
               <span className="text-zinc-500">Inversión estimada:</span>
               <span className="text-lg font-bold text-zinc-950 font-serif-luxury">
-                {totalCost.toFixed(2)} €
+                ${Math.round(totalCost).toLocaleString('es-MX')} MXN
               </span>
             </div>
 

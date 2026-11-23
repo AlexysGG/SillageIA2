@@ -12,7 +12,7 @@ export async function sharePerfume(
 ): Promise<ShareResult> {
   const shareTitle = `Aura Dupe: ${perfume.name} (${perfume.brand})`;
   const refText = originalReference ? ` Alternativa a ${originalReference}.` : '';
-  const shareText = `¡Mira esta fragancia recomendada por el sumiller de Aura! ✨\n${perfume.name} de ${perfume.brand} por solo ~${perfume.estimatedPrice.toFixed(2)}€ (${perfume.matchScore}% afinidad).${refText}\nFamilia: ${perfume.olfactoryFamily}\nDuración: ${perfume.longevityHours}`;
+  const shareText = `¡Mira esta fragancia recomendada por el sumiller de SILLAGE IA! ✨\n${perfume.name} de ${perfume.brand} por solo ~$${Math.round(perfume.estimatedPrice).toLocaleString('es-MX')} MXN (${perfume.matchScore}% afinidad).${refText}\nFamilia: ${perfume.olfactoryFamily}\nDuración: ${perfume.longevityHours}`;
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://aura.app';
 
   // 1. Try Native Web Share API

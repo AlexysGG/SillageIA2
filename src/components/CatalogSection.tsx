@@ -191,7 +191,7 @@ export const CatalogSection: React.FC<CatalogSectionProps> = ({
 
               <div className="mt-5 pt-4 border-t border-zinc-100 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-zinc-950">${p.price.toFixed(0)}</span>
+                  <span className="text-lg font-bold text-zinc-950">${p.price.toLocaleString('es-MX')} MXN</span>
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-700 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
                     {skinPred ? skinPred.rating : p.rating.toFixed(1)}

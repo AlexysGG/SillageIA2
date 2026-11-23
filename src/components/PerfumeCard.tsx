@@ -23,7 +23,7 @@ export const PerfumeCard: React.FC<PerfumeCardProps> = ({
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const textToCopy = `${perfume.name} (${perfume.brand}) - ~${perfume.estimatedPrice}€\nNotas: ${perfume.topNotes.join(', ')} / ${perfume.heartNotes.join(', ')} / ${perfume.baseNotes.join(', ')}\nLongevidad: ${perfume.longevityHours}`;
+    const textToCopy = `${perfume.name} (${perfume.brand}) - ~$${Math.round(perfume.estimatedPrice).toLocaleString('es-MX')} MXN\nNotas: ${perfume.topNotes.join(', ')} / ${perfume.heartNotes.join(', ')} / ${perfume.baseNotes.join(', ')}\nLongevidad: ${perfume.longevityHours}`;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -112,7 +112,7 @@ export const PerfumeCard: React.FC<PerfumeCardProps> = ({
         <div className="mt-4 pb-4 border-b border-zinc-100 flex items-baseline justify-between">
           <div>
             <span className="text-2xl font-bold tracking-tight text-zinc-950">
-              {perfume.estimatedPrice.toFixed(2)} €
+              ${Math.round(perfume.estimatedPrice).toLocaleString('es-MX')} MXN
             </span>
             <span className="text-xs text-zinc-400 ml-1.5 font-normal">aprox.</span>
           </div>
@@ -125,7 +125,7 @@ export const PerfumeCard: React.FC<PerfumeCardProps> = ({
         </div>
 
         {/* Affinity Match Score */}
-        <div className="mt-4 mb-4">
+        <div className="mt-4 mb-3">
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="text-zinc-500 font-medium">Afinidad con la referencia:</span>
             <span className="font-bold text-zinc-900">{perfume.matchScore}% similitud</span>
@@ -137,6 +137,41 @@ export const PerfumeCard: React.FC<PerfumeCardProps> = ({
             />
           </div>
         </div>
+
+        {/* Comparativa rápida Original vs Dupe */}
+        {(() => {
+          const base = perfume.matchScore || 88;
+          const comp = perfume.comparison || {
+            opening: Math.max(70, Math.min(98, base - 3)),
+            drydown: Math.max(72, Math.min(99, base + 1)),
+            longevity: Math.max(68, Math.min(97, base - 4)),
+            projection: Math.max(68, Math.min(96, base - 5)),
+          };
+          const metrics = [
+            { label: 'Salida', value: comp.opening },
+            { label: 'Secado', value: comp.drydown },
+            { label: 'Duración', value: comp.longevity },
+            { label: 'Proyección', value: comp.projection },
+          ];
+          return (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-4 p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/60">
+              {metrics.map((m) => (
+                <div key={m.label}>
+                  <div className="flex items-center justify-between text-[10px] text-slate-600 mb-0.5">
+                    <span className="font-medium">{m.label}</span>
+                    <span className="font-bold text-slate-800">{m.value}%</span>
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-slate-200/80 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-600"
+                      style={{ width: `${m.value}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Olfactory Pyramid Accord Pills */}
         <div className="space-y-2 mb-4 bg-zinc-50/70 p-3 rounded-xl border border-zinc-100 text-xs">

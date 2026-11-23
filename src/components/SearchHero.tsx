@@ -19,11 +19,11 @@ const PRESET_QUERIES = [
 ];
 
 const BUDGET_PRESETS = [
-  { label: 'Ultra Low-Cost', max: 25 },
-  { label: 'Económico', max: 35 },
-  { label: 'Equilibrado', max: 50 },
-  { label: 'Gama Media', max: 80 },
-  { label: 'Sin límite', max: 120 },
+  { label: 'Ultra Low-Cost', max: 550 },
+  { label: 'Económico', max: 800 },
+  { label: 'Equilibrado', max: 1200 },
+  { label: 'Gama Media', max: 1800 },
+  { label: 'Sin límite', max: 2800 },
 ];
 
 export const SearchHero: React.FC<SearchHeroProps> = ({
@@ -46,24 +46,24 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
   return (
     <section className="relative pt-10 pb-8 sm:pt-16 sm:pb-12 px-4 sm:px-6 max-w-4xl mx-auto">
       {/* Decorative ambient subtle background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-gradient-to-tr from-zinc-100 via-amber-50/20 to-zinc-50 rounded-full blur-3xl -z-10 pointer-events-none opacity-80" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-gradient-to-tr from-indigo-100/50 via-sky-100/40 to-emerald-100/40 rounded-full blur-3xl -z-10 pointer-events-none opacity-90" />
 
       {/* Header text */}
       <div className="text-center mb-8 sm:mb-10">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-zinc-200/80 shadow-2xs text-[11px] font-medium text-zinc-600 mb-4 tracking-wide uppercase">
-          <Sparkles className="w-3 h-3 text-amber-500" />
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur-md border border-white/80 shadow-2xs text-[11px] font-medium text-slate-600 mb-4 tracking-wide uppercase">
+          <Sparkles className="w-3 h-3 text-indigo-500" />
           <span>Sumiller de Fragancias & Dupes Accesibles</span>
         </div>
-        <h1 className="text-3xl sm:text-5xl font-normal tracking-tight text-zinc-950 font-serif-luxury leading-tight sm:leading-none">
+        <h1 className="text-3xl sm:text-5xl font-normal tracking-tight text-slate-950 font-serif-luxury leading-tight sm:leading-none">
           Encuentra tu aroma ideal al mejor precio
         </h1>
-        <p className="mt-3 text-sm sm:text-base text-zinc-500 max-w-xl mx-auto font-normal leading-relaxed">
+        <p className="mt-3 text-sm sm:text-base text-slate-500 max-w-xl mx-auto font-normal leading-relaxed">
           Describe qué perfume te gusta o qué notas buscas. Nuestra IA analiza pirámides olfativas y encuentra equivalencias reales y económicas.
         </p>
       </div>
 
       {/* Main Consultation Card */}
-      <div className="bg-white rounded-2xl border border-zinc-200/90 shadow-xl shadow-zinc-200/30 p-4 sm:p-7 transition-all">
+      <div className="bg-white/65 backdrop-blur-xl rounded-2xl border border-white/80 shadow-xl shadow-slate-900/5 p-4 sm:p-7 transition-all">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Input field */}
           <div>
@@ -85,11 +85,10 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
             </div>
 
             <div
-              className={`relative rounded-xl border transition-all duration-200 bg-zinc-50/60 ${
-                isFocused
+              className={`relative rounded-xl border transition-all duration-200 bg-zinc-50/60 ${isFocused
                   ? 'border-zinc-900 bg-white ring-2 ring-zinc-900/10 shadow-sm'
                   : 'border-zinc-200 hover:border-zinc-300'
-              }`}
+                }`}
             >
               <textarea
                 id="perfume-query"
@@ -122,7 +121,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Límite:</span>
                 <span className="text-sm font-bold text-zinc-900 bg-zinc-100 px-3 py-0.5 rounded-full border border-zinc-200">
-                  {maxPrice >= 120 ? 'Sin límite (> 120 €)' : `Hasta ${maxPrice} €`}
+                  {maxPrice >= 2800 ? 'Sin límite (> $2,800 MXN)' : `Hasta $${maxPrice.toLocaleString('es-MX')} MXN`}
                 </span>
               </div>
             </div>
@@ -131,19 +130,19 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
             <div className="px-1 py-2">
               <input
                 type="range"
-                min="15"
-                max="120"
-                step="5"
+                min="350"
+                max="2800"
+                step="50"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(parseInt(e.target.value, 10))}
                 className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-900 hover:accent-zinc-800 transition-all"
               />
               <div className="flex justify-between text-[11px] text-zinc-400 mt-1 font-medium">
-                <span>15 €</span>
-                <span>35 €</span>
-                <span>60 €</span>
-                <span>90 €</span>
-                <span>120 €+</span>
+                <span>$350</span>
+                <span>$800</span>
+                <span>$1,400</span>
+                <span>$2,100</span>
+                <span>$2,800+ MXN</span>
               </div>
             </div>
 
@@ -155,13 +154,12 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                   key={preset.label}
                   type="button"
                   onClick={() => setMaxPrice(preset.max)}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                    maxPrice === preset.max
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-all ${maxPrice === preset.max
                       ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs font-medium'
                       : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
-                  }`}
+                    }`}
                 >
-                  {preset.label} {preset.max < 120 && `(${preset.max}€)`}
+                  {preset.label} {preset.max < 2800 && `($${preset.max.toLocaleString('es-MX')})`}
                 </button>
               ))}
             </div>
@@ -205,7 +203,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
                 setQuery(preset);
                 // Also auto set sensible budget if it's Club de Nuit
                 if (preset.includes('Club de nuit')) {
-                  setMaxPrice(35);
+                  setMaxPrice(800);
                 }
               }}
               className="text-xs px-3 py-1.5 rounded-full bg-white border border-zinc-200 text-zinc-600 hover:text-zinc-950 hover:border-zinc-400 hover:bg-zinc-50 transition-all text-left shadow-2xs"

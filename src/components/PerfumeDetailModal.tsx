@@ -79,9 +79,11 @@ export const PerfumeDetailModal: React.FC<PerfumeDetailModalProps> = ({
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-zinc-950 font-serif-luxury">
-                {perfume.estimatedPrice.toFixed(2)} €
+                ${Math.round(perfume.estimatedPrice).toLocaleString('es-MX')} MXN
               </span>
-              <span className="text-xs text-zinc-400">frente a ~{originalPrice} € original</span>
+              <span className="text-xs text-zinc-400">
+                frente a ~${Math.round(originalPrice || 0).toLocaleString('es-MX')} MXN original
+              </span>
             </div>
           </div>
 

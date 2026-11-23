@@ -11,6 +11,8 @@ import { PerfumeDetailModal } from './components/PerfumeDetailModal';
 import { CatalogSection } from './components/CatalogSection';
 import { CatalogDetailModal } from './components/CatalogDetailModal';
 import { SkinTwinsSection } from './components/SkinTwinsSection';
+import { VibeTranslatorSection } from './components/VibeTranslatorSection';
+import { AuthModal } from './components/AuthModal';
 import { WishlistDrawer } from './components/WishlistDrawer';
 import { OfflineBanner } from './components/OfflineBanner';
 import { InstallModal } from './components/InstallModal';
@@ -46,13 +48,15 @@ import { Info, RefreshCw, Feather, WifiOff, Bell, X } from 'lucide-react';
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('search');
   const [query, setQuery] = useState('');
-  const [maxPrice, setMaxPrice] = useState(35);
+  const [maxPrice, setMaxPrice] = useState(800);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
   const [results, setResults] = useState<RecommendationResponse | null>(null);
   const [selectedPerfume, setSelectedPerfume] = useState<PerfumeItem | null>(null);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [inAppNotification, setInAppNotification] = useState<{
@@ -269,9 +273,9 @@ export default function App() {
         if (getNotificationPermission() === 'granted') {
           const topPick = data.recommendations?.[0];
           const body = topPick
-            ? `Encontramos ${data.recommendations.length} alternativas para "${data.originalReference}". Destacada: ${topPick.name} (${topPick.brand}) ~${topPick.estimatedPrice.toFixed(2)}€.`
+            ? `Encontramos ${data.recommendations.length} alternativas para "${data.originalReference}". Destacada: ${topPick.name} (${topPick.brand}) ~$${Math.round(topPick.estimatedPrice).toLocaleString('es-MX')} MXN.`
             : `Tu consulta sobre "${data.originalReference}" está lista.`;
-          sendLocalNotification('Aura AI · Recomendación lista', {
+          sendLocalNotification('SILLAGE IA · Recomendación lista', {
             body,
             data: { url: '/?action=search' },
           });
@@ -329,20 +333,20 @@ export default function App() {
       const q = 'quiero un perfume similar de Club de nuit mas barato';
       setActiveTab('search');
       setQuery(q);
-      setMaxPrice(35);
-      handleConsultar(q, 35);
+      setMaxPrice(800);
+      handleConsultar(q, 800);
     } else if (action === 'sommelier') {
       const q = 'asesoramiento del sumiller olfativo para fragancias versátiles y económicas';
       setActiveTab('search');
       setQuery(q);
-      setMaxPrice(40);
-      handleConsultar(q, 40);
+      setMaxPrice(950);
+      handleConsultar(q, 950);
     }
   }, []);
 
   const handleFindDupesFromCatalog = (perfume: CatalogPerfume) => {
     const q = `quiero un dupe económico similar a ${perfume.name} de ${perfume.brand}`;
-    const budget = Math.min(80, Math.max(25, Math.round(perfume.price * 0.45)));
+    const budget = Math.min(2800, Math.max(600, Math.round(perfume.price * 0.45)));
     setActiveTab('search');
     setQuery(q);
     setMaxPrice(budget);
@@ -350,16 +354,27 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA] text-zinc-900 selection:bg-zinc-900 selection:text-white">
+    <div className="relative min-h-screen flex flex-col text-slate-900 selection:bg-slate-900 selection:text-white overflow-x-hidden">
+      {/* Ambient Glassmorphism Backdrop Orbs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-200/35 blur-3xl" />
+        <div className="absolute top-1/3 -right-24 w-[28rem] h-[28rem] rounded-full bg-emerald-200/30 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/3 w-96 h-96 rounded-full bg-sky-200/35 blur-3xl" />
+      </div>
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         favoritesCount={favorites.length}
         onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenAuth={() => {
+          setAuthModalMode('login');
+          setIsAuthModalOpen(true);
+        }}
         onReset={() => {
           setQuery('');
-          setMaxPrice(35);
+          setMaxPrice(800);
           setResults(null);
           setError(null);
         }}
@@ -451,6 +466,15 @@ export default function App() {
           </>
         )}
 
+        {activeTab === 'vibes' && (
+          <VibeTranslatorSection
+            skinProfile={skinProfile}
+            favorites={favorites}
+            onToggleFavorite={handleToggleFavorite}
+            onSelectPerfume={(perfume) => setSelectedPerfume(perfume)}
+          />
+        )}
+
         {activeTab === 'catalog' && (
           <CatalogSection
             perfumes={catalog}
@@ -479,6 +503,10 @@ export default function App() {
             }}
             onRefreshSyncCount={refreshPendingCount}
             onSelectCatalogPerfume={(p) => setSelectedCatalogPerfume(p)}
+            onOpenAuth={(mode) => {
+              setAuthModalMode(mode);
+              setIsAuthModalOpen(true);
+            }}
           />
         )}
       </main>
@@ -573,19 +601,37 @@ export default function App() {
         </div>
       )}
 
-      {/* Clean Minimalist Footer */}
-      <footer className="border-t border-zinc-200/80 bg-white py-8 mt-16 text-center text-xs text-zinc-400">
+      {/* Auth Modal (Login / Register / Account) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        initialMode={authModalMode}
+        user={authUser}
+        favoritesCount={favorites.length}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthChange={(u) => {
+          setAuthUser(u);
+          if (!u) {
+            setSkinProfile(null);
+            localStorage.removeItem('aura_skin_profile');
+          }
+        }}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onGoToTwins={() => setActiveTab('twins')}
+      />
+
+      {/* Clean Minimalist Glass Footer */}
+      <footer className="border-t border-white/70 bg-white/55 backdrop-blur-xl py-8 mt-16 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-zinc-800 tracking-wider font-serif-luxury">AURA</span>
-            <span>• PWA & Atelier Olfativo con IA y Persistencia Offline</span>
+            <span className="font-semibold text-slate-900 tracking-wider">SILLAGE IA</span>
+            <span>• Atelier Olfativo con IA y Persistencia en la Nube</span>
           </div>
-          <div className="flex items-center gap-4 text-[11px] text-zinc-500">
-            <span>Precios orientativos en tiendas europeas</span>
+          <div className="flex items-center gap-4 text-[11px] text-slate-500">
+            <span>Precios orientativos en Pesos Mexicanos (MXN)</span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Feather className="w-3 h-3" />
-              Diseño PWA Standalone
+              Diseño Glassmorphism PWA
             </span>
           </div>
         </div>

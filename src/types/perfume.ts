@@ -16,6 +16,12 @@ export interface PerfumeItem {
   pros: string[];
   badge: string;
   vibeDescription: string;
+  comparison?: {
+    opening: number;
+    drydown: number;
+    longevity: number;
+    projection: number;
+  };
 }
 
 export interface RecommendationResponse {
@@ -24,6 +30,14 @@ export interface RecommendationResponse {
   analysis: string;
   recommendations: PerfumeItem[];
   offlineFallback?: boolean;
+}
+
+export interface VibeTranslationResponse {
+  vibeQuery: string;
+  vibeInterpreted: string;
+  olfactoryPalette: string[];
+  atmosphereSummary: string;
+  recommendations: PerfumeItem[];
 }
 
 export interface CatalogPerfume {

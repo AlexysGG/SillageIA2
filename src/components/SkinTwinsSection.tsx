@@ -33,6 +33,7 @@ interface SkinTwinsSectionProps {
   onProfileChange: (profile: SkinProfile | null) => void;
   onRefreshSyncCount: () => Promise<void>;
   onSelectCatalogPerfume: (perfume: CatalogPerfume) => void;
+  onOpenAuth?: (mode: 'login' | 'register') => void;
 }
 
 const SKIN_TYPES = ['Grasa', 'Seca', 'Mixta', 'Normal', 'Sensible'];
@@ -47,6 +48,7 @@ export const SkinTwinsSection: React.FC<SkinTwinsSectionProps> = ({
   onProfileChange,
   onRefreshSyncCount,
   onSelectCatalogPerfume,
+  onOpenAuth,
 }) => {
   // Auth state
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -233,88 +235,38 @@ export const SkinTwinsSection: React.FC<SkinTwinsSectionProps> = ({
         </p>
       </div>
 
-      {/* Not logged in -> Auth Card */}
+      {/* Not logged in -> Clear Registration Gate */}
       {!user ? (
-        <div className="max-w-md mx-auto bg-white rounded-3xl border border-zinc-200/90 shadow-xl shadow-zinc-200/30 p-6 sm:p-8">
-          <div className="flex items-center justify-center gap-2 mb-6 p-1 bg-zinc-100 rounded-xl">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('login');
-                setAuthError(null);
-              }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                authMode === 'login' ? 'bg-white text-zinc-950 shadow-xs' : 'text-zinc-500'
-              }`}
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('register');
-                setAuthError(null);
-              }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                authMode === 'register' ? 'bg-white text-zinc-950 shadow-xs' : 'text-zinc-500'
-              }`}
-            >
-              Crear Cuenta
-            </button>
+        <div className="max-w-lg mx-auto rounded-3xl bg-white/65 backdrop-blur-xl border border-white/80 shadow-xl shadow-slate-900/5 p-7 sm:p-9 text-center space-y-5">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md">
+            <Lock className="w-6 h-6 text-emerald-300" />
           </div>
-
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                Usuario
-              </label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Tu nombre de usuario"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50/70 text-sm focus:bg-white focus:border-zinc-900 focus:outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50/70 text-sm focus:bg-white focus:border-zinc-900 focus:outline-hidden"
-              />
-            </div>
-
-            {authError && (
-              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-                {authError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-all disabled:opacity-60"
-            >
-              {authLoading
-                ? 'Procesando...'
-                : authMode === 'login'
-                ? 'Entrar a mi Perfil Cutáneo'
-                : 'Registrarme y Configurar Piel'}
-            </button>
-          </form>
-
-          <div className="mt-5 pt-4 border-t border-zinc-100 flex items-center gap-2 text-[11px] text-zinc-400">
-            <Lock className="w-3.5 h-3.5 shrink-0" />
-            <span>Tu perfil cutáneo se guarda en el servidor y en IndexedDB para acceso offline.</span>
+          <div className="space-y-2">
+            <h3 className="text-xl font-serif-luxury text-slate-950">
+              Necesitas registrarte para acceder
+            </h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Para configurar tu perfil de piel y descubrir tus <strong>Gemelos de Piel</strong>, primero debes crear una cuenta o iniciar sesión desde el botón superior.
+            </p>
           </div>
+          {onOpenAuth && (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => onOpenAuth('register')}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-sm"
+              >
+                Registrarme ahora
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAuth('login')}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-white/80 hover:bg-white text-slate-800 border border-slate-200/80 text-xs font-semibold transition-all"
+              >
+                Ya tengo cuenta · Iniciar sesión
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -482,6 +434,57 @@ export const SkinTwinsSection: React.FC<SkinTwinsSectionProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Guía de Atomizaciones y Zonas */}
+                    {(() => {
+                      const skinLower = (skinProfile.skinType || '').toLowerCase();
+                      const hydLower = (skinProfile.hydration || '').toLowerCase();
+                      const climLower = (skinProfile.climate || '').toLowerCase();
+                      const isOily = skinLower.includes('grasa');
+                      const isDry = skinLower.includes('seca') || hydLower.includes('baja');
+                      const isSensitive = skinLower.includes('sensible');
+                      const isHot = climLower.includes('cálido');
+
+                      const sprays = isOily && isHot ? '2 – 3 atomizaciones' : isDry ? '5 – 6 atomizaciones' : '3 – 4 atomizaciones';
+                      const zones = isSensitive
+                        ? ['Sobre ropa (hombros/cuello)', 'Nuca (cabello)', 'Muñeca (prueba previa)']
+                        : isDry
+                        ? ['Cuello hidratado (2)', 'Clavícula / pecho (1)', 'Ropa o suéter (2)']
+                        : isOily
+                        ? ['Detrás de cada oreja (2)', 'Nuca (1)', 'Evitar pecho en calor']
+                        : ['Detrás de orejas (2)', 'Muñecas sin frotar (1)', 'Cuello o ropa (1)'];
+                      const tip = isDry
+                        ? 'Aplica crema neutra sin aroma antes de atomizar para evitar evaporación rápida.'
+                        : isOily
+                        ? 'Tu piel retiene bien las notas de fondo; modera los sprays en días calurosos.'
+                        : isSensitive
+                        ? 'Prioriza aplicar sobre tela o a 20 cm para evitar irritación en piel.'
+                        : 'Atomiza a 15–20 cm sin frotar las muñecas para no romper la salida.';
+
+                      return (
+                        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                              <Droplets className="w-3.5 h-3.5 text-emerald-600" />
+                              Guía de Atomizaciones y Zonas
+                            </span>
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                              {sprays}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {zones.map((z) => (
+                              <span
+                                key={z}
+                                className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-white/90 text-emerald-900 border border-emerald-200/70"
+                              >
+                                {z}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-emerald-800 leading-relaxed">{tip}</p>
+                        </div>
+                      );
+                    })()}
                     {topPredictions.map((pred) => {
                       const fullPerfume = catalog.find((c) => c.id === pred.id);
                       return (

@@ -92,7 +92,7 @@ export async function sendLocalNotification(
 
 export async function triggerSamplePerfumeAlert(): Promise<boolean> {
   return sendLocalNotification('¡Alerta de Dupe Encontrado! 🌟', {
-    body: 'Vibrant Leather (Zara) está disponible como alternativa directa a Club de Nuit por solo 22.95€ (-45% ahorro).',
+    body: 'Vibrant Leather (Zara) está disponible como alternativa directa a Club de Nuit por solo $520 MXN (-47% ahorro).',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-192x192.png',
     data: { url: '/?action=club_de_nuit' },

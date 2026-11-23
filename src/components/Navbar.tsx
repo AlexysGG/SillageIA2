@@ -1,13 +1,14 @@
 import React from 'react';
-import { Sparkles, Heart, Download, Bell, Smartphone, BookOpen, Users } from 'lucide-react';
+import { Sparkles, Heart, Download, Bell, BookOpen, Users, Wand2, LogIn, User } from 'lucide-react';
 
-export type ActiveTab = 'search' | 'catalog' | 'twins';
+export type ActiveTab = 'search' | 'vibes' | 'catalog' | 'twins';
 
 interface NavbarProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   favoritesCount: number;
   onOpenWishlist: () => void;
+  onOpenAuth: () => void;
   onReset: () => void;
   onOpenInstall: () => void;
   onOpenNotifications: () => void;
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   favoritesCount,
   onOpenWishlist,
+  onOpenAuth,
   onReset,
   onOpenInstall,
   onOpenNotifications,
@@ -31,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   username,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-zinc-100 transition-all">
+    <header className="sticky top-0 z-40 bg-white/35 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/30 border-b border-white/50 shadow-sm transition-all">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
         {/* Brand */}
         <button
@@ -41,25 +43,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           }}
           className="flex items-center gap-3 group text-left transition-transform active:scale-95 shrink-0"
         >
-          <div className="w-9 h-9 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs group-hover:bg-zinc-800 transition-colors">
-            <Sparkles className="w-4 h-4 text-zinc-100" />
+          <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:bg-slate-800 transition-colors">
+            <Sparkles className="w-4 h-4 text-slate-100" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold tracking-wider text-sm uppercase text-zinc-900">AURA</span>
-              <span className="text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded-xs bg-zinc-100 text-zinc-600 font-medium border border-zinc-200/60">
-                AI Atelier
-              </span>
-              {isStandalone && (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[9px] uppercase tracking-widest px-1.5 py-0.2 rounded-xs bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                  <Smartphone className="w-2.5 h-2.5" /> App
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-zinc-400 font-normal hidden sm:block">
-              Sumiller AI · Gemelos de Piel
-            </p>
-          </div>
+          <span className="font-semibold tracking-wider text-sm uppercase text-slate-900">
+            SILLAGE IA
+          </span>
         </button>
 
         {/* Center Navigation Tabs (Desktop) */}
@@ -75,6 +64,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Sumiller AI</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onTabChange('vibes')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              activeTab === 'vibes'
+                ? 'bg-white text-zinc-950 shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900'
+            }`}
+          >
+            <Wand2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Traductor de Vibes</span>
           </button>
           <button
             type="button"
@@ -132,18 +133,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Wishlist Button */}
+          {/* Compact Wishlist Icon */}
           <button
             onClick={onOpenWishlist}
-            className="relative flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-200 transition-all active:scale-95 shadow-2xs"
+            className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 bg-white/60 hover:bg-white border border-white/80 transition-all shadow-2xs"
             title="Ver favoritos guardados"
           >
-            <Heart className={`w-3.5 h-3.5 ${favoritesCount > 0 ? 'fill-rose-500 text-rose-500' : 'text-zinc-600'}`} />
-            <span className="hidden sm:inline">Favoritos</span>
+            <Heart className={`w-3.5 h-3.5 ${favoritesCount > 0 ? 'fill-rose-500 text-rose-500' : 'text-slate-600'}`} />
             {favoritesCount > 0 && (
-              <span className="bg-zinc-900 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-4 text-center">
+              <span className="absolute -top-1 -right-1 bg-slate-900 text-white text-[9px] font-bold px-1 rounded-full min-w-4 text-center leading-tight">
                 {favoritesCount}
               </span>
+            )}
+          </button>
+
+          {/* Login / Account Button (in place of Favoritos pill) */}
+          <button
+            onClick={onOpenAuth}
+            className="relative flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+            title={username ? 'Gestionar cuenta' : 'Iniciar sesión o registrarse'}
+          >
+            {username ? (
+              <>
+                <User className="w-3.5 h-3.5 text-emerald-300" />
+                <span className="max-w-24 truncate">{username}</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-3.5 h-3.5 text-slate-200" />
+                <span>Iniciar sesión</span>
+              </>
             )}
           </button>
         </div>
@@ -159,7 +178,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Sumiller AI</span>
+          <span>Sumiller</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onTabChange('vibes')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            activeTab === 'vibes' ? 'bg-zinc-900 text-white' : 'text-zinc-600'
+          }`}
+        >
+          <Wand2 className="w-3.5 h-3.5" />
+          <span>Vibes</span>
         </button>
         <button
           type="button"
